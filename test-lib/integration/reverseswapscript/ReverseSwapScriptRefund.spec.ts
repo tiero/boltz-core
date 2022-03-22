@@ -41,7 +41,7 @@ describe('ReverseSwapScript refund', () => {
     await bitcoinClient.sendRawTransaction(refundTransaction.toHex());
   });
 
-  afterAll(async () => {
+  afterEach(async () => {
     await bitcoinClient.generate(1);
   });
 });

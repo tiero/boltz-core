@@ -10,8 +10,8 @@
     "compile:typescript": "tsc",
     "compile:typescript:watch": "tsc --watch",
     "lint": "eslint --max-warnings 0 --ext .ts .",
-    "docker:start": "nigiri start --liquid",
-    "docker:stop": "nigiri stop --delete",
+    "docker:start": "./startRegtest.sh",
+    "docker:stop": "docker stop boltz-elements && docker rm boltz-elements && rm -rf ./docker/liquidregtest",
     "test": "npm run test:solidity && npm run test:unit && npm run test:int",
     "test:solidity": "hardhat test",
     "test:unit": "jest test-lib/unit",
@@ -46,7 +46,7 @@
     "bitcoinjs-lib": "^6.0.0",
     "bn.js": "^5.2.0",
     "ecpair": "^1.0.1",
-    "liquidjs-lib": "^5.2.3",
+    "liquidjs-lib": "^6.0.2-liquid.2",
     "varuint-bitcoin": "^1.1.2"
   },
   "devDependencies": {

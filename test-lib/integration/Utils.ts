@@ -8,8 +8,8 @@ import { Networks, OutputType, detectSwap, constructClaimTransaction, constructR
 export const bitcoinClient = new ChainClient({
   host: '127.0.0.1',
   port: 18884,
-  rpcuser: 'admin1',
-  rpcpass: '123',
+  rpcuser: 'elements',
+  rpcpass: 'elements',
 });
 
 export const destinationOutput = p2wpkhOutput(

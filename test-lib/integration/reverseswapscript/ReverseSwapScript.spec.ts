@@ -24,6 +24,8 @@ describe('ReverseSwapScript', () => {
 
   beforeAll(async () => {
     await bitcoinClient.init();
+    await bitcoinClient.generate(1);
+    await bitcoinClient.rescanBlockchain();
   });
 
   test('should send funds to reverse swaps', async () => {

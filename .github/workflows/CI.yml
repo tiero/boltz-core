@@ -20,15 +20,15 @@ jobs:
         uses: actions/setup-node@v1
         with:
           node-version: ${{ matrix.node-version }}
-      
-      - name: Install Nigiri
-        uses: vulpemventures/nigiri-github-action@v1
 
       - name: Check out code
         uses: actions/checkout@v2
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Start Bitcoin Core container
+        run: npm run docker:start
 
       - name: Compile
         run: npm run compile
