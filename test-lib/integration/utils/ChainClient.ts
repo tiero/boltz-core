@@ -161,12 +161,6 @@ class ChainClient {
     await sleep(1000);
     return hash;
   };
-
-  public rescanBlockchain = async (): Promise<string[]> => {
-    const hash = await this.client.request<string[]>('rescanblockchain', []);
-    await sleep(1000);
-    return hash;
-  };
 }
 
 function sleep(ms) {

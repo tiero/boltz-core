@@ -1,6 +1,5 @@
-import { ECPair } from 'ecpair';
 import { Transaction, crypto, confidential, networks } from 'liquidjs-lib';
-import { getScriptHashFunction, LBTC_REGTEST } from './Utils';
+import { ECPair, getScriptHashFunction, LBTC_REGTEST } from './Utils';
 import { getHexBuffer } from '../../../lib/Utils';
 import swapScript from '../../../lib/swap/SwapScript';
 import { OutputType } from '../../../lib/consts/Enums';

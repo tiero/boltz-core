@@ -1,4 +1,3 @@
-import { ECPair } from 'ecpair';
 import ops from '@boltz/bitcoin-ops';
 import { Transaction, crypto, script } from 'liquidjs-lib';
 import Networks from '../../../lib/consts/Networks';
@@ -12,6 +11,7 @@ import {
   getOutputScriptType,
   scriptBuffersToScript,
 } from '../../../lib/swap/SwapUtils';
+import { ECPair } from './Utils';
 
 describe('SwapUtils', () => {
   const publicKeyHash = '0000000000000000000000000000000000000000';

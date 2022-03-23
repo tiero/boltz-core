@@ -1,4 +1,5 @@
-import { ECPair, ECPairInterface } from 'ecpair';
+import { ECPairFactory, ECPairInterface, ECPairAPI, TinySecp256k1Interface } from 'ecpair';
+import * as ecc from 'tiny-secp256k1';
 import { crypto, address, Transaction, networks } from 'liquidjs-lib';
 import ChainClient from './utils/ChainClient';
 import { ClaimDetails, RefundDetails } from '../../lib/consts/Types';
@@ -11,6 +12,9 @@ export const bitcoinClient = new ChainClient({
   rpcuser: 'elements',
   rpcpass: 'elements',
 });
+
+const tinysecp: TinySecp256k1Interface = ecc;
+export const ECPair: ECPairAPI = ECPairFactory(tinysecp);
 
 export const destinationOutput = p2wpkhOutput(
   crypto.hash160(
@@ -141,3 +145,4 @@ export const sendFundsToRedeemScript = async (
     },
   };
 };
+

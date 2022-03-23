@@ -3,6 +3,7 @@
 container_name='boltz-elements'
 
 echo "Creating container"
+chmod -R 777 `pwd`/docker
 docker run -d -v `pwd`/docker/:/home/elements/.elements --name $container_name -p 18884:18884 ghcr.io/vulpemventures/elements:latest
 
 sleep 1

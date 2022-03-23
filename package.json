@@ -9,7 +9,7 @@
     "compile:solidity:ethers": "typechain --target ethers-v5 --out-dir typechain/ ./artifacts/@openzeppelin/contracts/token/ERC20/ERC20.sol/ERC20.json && typechain --target ethers-v5 --out-dir typechain/ ./artifacts/contracts/EtherSwap.sol/EtherSwap.json && typechain --target ethers-v5 --out-dir typechain/ ./artifacts/contracts/ERC20Swap.sol/ERC20Swap.json && rm ./typechain/index.ts",
     "compile:typescript": "tsc",
     "compile:typescript:watch": "tsc --watch",
-    "lint": "eslint --max-warnings 0 --ext .ts .",
+    "lint": "eslint --max-warnings 0 --ext .ts . --ignore-pattern '**/docker/**'",
     "docker:start": "./startRegtest.sh",
     "docker:stop": "docker stop boltz-elements && docker rm boltz-elements && rm -rf ./docker/liquidregtest",
     "test": "npm run test:solidity && npm run test:unit && npm run test:int",
@@ -43,10 +43,11 @@
     "bip32": "^3.0.1",
     "bip65": "^1.0.3",
     "bip66": "^1.1.5",
-    "bitcoinjs-lib": "^6.0.0",
+    "bitcoinjs-lib": "^6.0.1",
     "bn.js": "^5.2.0",
-    "ecpair": "^1.0.1",
+    "ecpair": "^2.0.1",
     "liquidjs-lib": "^6.0.2-liquid.2",
+    "tiny-secp256k1": "^2.2.1",
     "varuint-bitcoin": "^1.1.2"
   },
   "devDependencies": {
