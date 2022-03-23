@@ -14,8 +14,6 @@ export let refundDetails: RefundDetails[] = [];
 
 
 describe('ReverseSwapScript claim', () => {
-
-
   const claimKeys = ECPair.makeRandom({ network: Networks.liquidRegtest });
   const refundKeys = ECPair.makeRandom({ network: Networks.liquidRegtest });
 
