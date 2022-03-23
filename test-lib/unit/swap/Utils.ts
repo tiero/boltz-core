@@ -3,7 +3,7 @@ import { OutputType } from '../../../lib/consts/Enums';
 import { p2wshOutput, p2shOutput, p2shP2wshOutput } from '../../../lib/swap/Scripts';
 import { PrefixUnconfidential } from '../../../lib/consts/Buffer';
 import { networks } from 'liquidjs-lib';
-import ECPairFactory, { ECPairAPI, TinySecp256k1Interface } from 'ecpair';
+import { ECPairAPI, TinySecp256k1Interface, ECPairFactory } from 'ecpair';
 import * as ecc from 'tiny-secp256k1';
 
 

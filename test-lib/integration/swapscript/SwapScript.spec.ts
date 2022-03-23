@@ -23,6 +23,7 @@ describe('SwapScript claim', () => {
 
   beforeAll(async () => {
     await bitcoinClient.init();
+    await bitcoinClient.generate(1);
   });
 
   beforeEach(async () => {

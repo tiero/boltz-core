@@ -7,6 +7,7 @@ import { p2wshOutput } from '../../../lib/swap/Scripts';
 import { ClaimDetails, RefundDetails } from '../../../lib/consts/Types';
 
 
+
 export let invalidPreimageLengthSwap: ClaimDetails;
 
 export let claimDetails: ClaimDetails[] = [];
@@ -27,6 +28,8 @@ describe('ReverseSwapScript claim', () => {
 
   beforeAll(async () => {
     await bitcoinClient.init();
+    await bitcoinClient.generate(1);
+    await bitcoinClient.rescanBlockchain();
   });
 
   beforeEach(async () => {

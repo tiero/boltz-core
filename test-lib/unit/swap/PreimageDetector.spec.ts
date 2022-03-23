@@ -8,7 +8,6 @@ import { detectPreimage } from '../../../lib/swap/PreimageDetector';
 import { constructClaimTransaction } from '../../../lib/swap/Claim';
 import { Nonce } from '../../../lib/consts/Buffer';
 
-
 describe('Preimagedetector', () => {
   const claimKeys = ECPair.makeRandom();
   const refundKeys = ECPair.makeRandom();
