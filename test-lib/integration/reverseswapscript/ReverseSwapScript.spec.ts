@@ -28,8 +28,6 @@ describe('ReverseSwapScript claim', () => {
 
   beforeAll(async () => {
     await bitcoinClient.init();
-    await bitcoinClient.generate(1);
-    await bitcoinClient.rescanBlockchain();
   });
 
   beforeEach(async () => {
