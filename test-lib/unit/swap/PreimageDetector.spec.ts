@@ -1,6 +1,5 @@
-import { ECPair } from 'ecpair';
 import { Transaction, crypto, confidential, networks } from 'liquidjs-lib';
-import { getScriptHashFunction, LBTC_REGTEST } from './Utils';
+import { ECPair, getScriptHashFunction, LBTC_REGTEST } from './Utils';
 import { getHexBuffer } from '../../../lib/Utils';
 import swapScript from '../../../lib/swap/SwapScript';
 import { OutputType } from '../../../lib/consts/Enums';
@@ -8,6 +7,7 @@ import { p2wpkhOutput } from '../../../lib/swap/Scripts';
 import { detectPreimage } from '../../../lib/swap/PreimageDetector';
 import { constructClaimTransaction } from '../../../lib/swap/Claim';
 import { Nonce } from '../../../lib/consts/Buffer';
+
 
 describe('Preimagedetector', () => {
   const claimKeys = ECPair.makeRandom();
