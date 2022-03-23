@@ -1,5 +1,5 @@
 import { ECPair, ECPairInterface } from 'ecpair';
-import { crypto, address, Transaction } from 'bitcoinjs-lib';
+import { crypto, address, Transaction, networks } from 'liquidjs-lib';
 import ChainClient from './utils/ChainClient';
 import { ClaimDetails, RefundDetails } from '../../lib/consts/Types';
 import { p2wpkhOutput, p2shOutput, p2wshOutput, p2shP2wshOutput } from '../../lib/swap/Scripts';
@@ -7,14 +7,14 @@ import { Networks, OutputType, detectSwap, constructClaimTransaction, constructR
 
 export const bitcoinClient = new ChainClient({
   host: '127.0.0.1',
-  port: 18443,
-  rpcuser: 'kek',
-  rpcpass: 'kek',
+  port: 18884,
+  rpcuser: 'elements',
+  rpcpass: 'elements',
 });
 
 export const destinationOutput = p2wpkhOutput(
   crypto.hash160(
-    ECPair.makeRandom({ network: Networks.bitcoinRegtest }).publicKey!,
+    ECPair.makeRandom({ network: Networks.liquidRegtest }).publicKey!,
   ),
 );
 
@@ -24,6 +24,7 @@ export const claimSwap = async (claimDetails: ClaimDetails): Promise<void> => {
     destinationOutput,
     1,
     true,
+    networks.regtest.assetHash,
   );
 
   await bitcoinClient.sendRawTransaction(claimTransaction.toHex());
@@ -35,6 +36,8 @@ export const refundSwap = async (refundDetails: RefundDetails, blockHeight: numb
     destinationOutput,
     blockHeight,
     1,
+    true,
+    networks.regtest.assetHash
   );
 
   await bitcoinClient.sendRawTransaction(refundTransaction.toHex());
@@ -110,17 +113,19 @@ export const sendFundsToRedeemScript = async (
   timeoutBlockHeight: number,
   swapOutput: {
     vout: number,
-    value: number,
+    value: Buffer,
     script: Buffer,
+    asset: Buffer,
+    nonce: Buffer,
     txHash: Buffer,
     type: OutputType,
   },
 }> => {
-  const swapAddress = address.fromOutputScript(outputFunction(redeemScript), Networks.bitcoinRegtest);
+  const swapAddress = address.fromOutputScript(outputFunction(redeemScript), Networks.liquidRegtest);
   const transactionId = await bitcoinClient.sendToAddress(swapAddress, 10000);
   const transaction = Transaction.fromHex(await bitcoinClient.getRawTransaction(transactionId) as string);
 
-  const { vout, value, script } = detectSwap(redeemScript, transaction)!;
+  const { vout, value, script, asset, nonce } = detectSwap(redeemScript, transaction)!;
 
   return {
     redeemScript,
@@ -129,6 +134,8 @@ export const sendFundsToRedeemScript = async (
       vout,
       value,
       script,
+      asset,
+      nonce,
       type: outputType,
       txHash: transaction.getHash(),
     },

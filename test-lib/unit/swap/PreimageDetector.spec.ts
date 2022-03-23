@@ -1,12 +1,13 @@
 import { ECPair } from 'ecpair';
-import { Transaction, crypto } from 'bitcoinjs-lib';
-import { getScriptHashFunction } from './Utils';
+import { Transaction, crypto, confidential, networks } from 'liquidjs-lib';
+import { getScriptHashFunction, LBTC_REGTEST } from './Utils';
 import { getHexBuffer } from '../../../lib/Utils';
 import swapScript from '../../../lib/swap/SwapScript';
 import { OutputType } from '../../../lib/consts/Enums';
 import { p2wpkhOutput } from '../../../lib/swap/Scripts';
 import { detectPreimage } from '../../../lib/swap/PreimageDetector';
 import { constructClaimTransaction } from '../../../lib/swap/Claim';
+import { Nonce } from '../../../lib/consts/Buffer';
 
 describe('Preimagedetector', () => {
   const claimKeys = ECPair.makeRandom();
@@ -40,13 +41,16 @@ describe('Preimagedetector', () => {
           type: i,
           keys: claimKeys,
           vout: 0,
-          value: 123123,
+          value: confidential.satoshiToConfidentialValue(123123),
+          asset: LBTC_REGTEST,
+          nonce: Nonce,
           script: scriptHashFunction(redeemScript),
           txHash: getHexBuffer('287d2e3a5726710c2b6c94084c28789b250d703feb1e10012921cc2d4ab7f277'),
         }],
         p2wpkhOutput(crypto.hash160(claimKeys.publicKey)),
         2,
         false,
+        networks.regtest.assetHash
       );
 
       claimTransactions.push(claimTransaction);

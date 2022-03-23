@@ -1,6 +1,6 @@
 import { ECPair } from 'ecpair';
 import ops from '@boltz/bitcoin-ops';
-import { Transaction, crypto, script } from 'bitcoinjs-lib';
+import { Transaction, crypto, script } from 'liquidjs-lib';
 import Networks from '../../../lib/consts/Networks';
 import * as scripts from '../../../lib/swap/Scripts';
 import { OutputType } from '../../../lib/consts/Enums';
@@ -88,7 +88,7 @@ describe('SwapUtils', () => {
   });
 
   test('should get the correct output type of output scripts', () => {
-    const keys = ECPair.makeRandom({ network: Networks.bitcoinRegtest });
+    const keys = ECPair.makeRandom({ network: Networks.liquidRegtest });
     const publicKeyHash = crypto.hash160(keys.publicKey!);
 
     // PKH outputs

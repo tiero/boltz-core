@@ -2,6 +2,8 @@ import { randomBytes } from 'crypto';
 import { claimDetails } from './SwapScript.spec';
 import { constructClaimTransaction } from '../../../lib/Boltz';
 import { bitcoinClient, destinationOutput, claimSwap } from '../Utils';
+import { networks } from 'liquidjs-lib';
+
 
 describe('SwapScript claim', () => {
   test('should not claim swaps if the preimage has an invalid hash', async () => {
@@ -39,13 +41,14 @@ describe('SwapScript claim', () => {
       claimDetails.slice(3, 6),
       destinationOutput,
       1,
-      false,
+      true,
+      networks.regtest.assetHash
     );
 
     await bitcoinClient.sendRawTransaction(claimTransaction.toHex());
   });
 
-  afterAll(async () => {
+  afterEach(async () => {
     await bitcoinClient.generate(1);
   });
 });

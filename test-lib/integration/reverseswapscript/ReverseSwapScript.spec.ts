@@ -1,10 +1,11 @@
 import { ECPair } from 'ecpair';
-import { crypto } from 'bitcoinjs-lib';
+import { crypto } from 'liquidjs-lib';
 import { getHexBuffer } from '../../../lib/Utils';
 import { p2wshOutput } from '../../../lib/swap/Scripts';
 import { ClaimDetails, RefundDetails } from '../../../lib/consts/Types';
 import { Networks, reverseSwapScript, OutputType } from '../../../lib/Boltz';
 import { bitcoinClient, createSwapDetails, sendFundsToRedeemScript } from '../Utils';
+
 
 export let invalidPreimageLengthSwap: ClaimDetails;
 
@@ -12,8 +13,8 @@ export let claimDetails: ClaimDetails[] = [];
 export let refundDetails: RefundDetails[] = [];
 
 describe('ReverseSwapScript', () => {
-  const claimKeys = ECPair.makeRandom({ network: Networks.bitcoinRegtest });
-  const refundKeys = ECPair.makeRandom({ network: Networks.bitcoinRegtest });
+  const claimKeys = ECPair.makeRandom({ network: Networks.liquidRegtest });
+  const refundKeys = ECPair.makeRandom({ network: Networks.liquidRegtest });
 
   const invalidPreimage = getHexBuffer('b5b2dbb1f0663878ecbc20323b58b92c');
   const invalidPreimageHash = crypto.sha256(invalidPreimage);
@@ -23,6 +24,8 @@ describe('ReverseSwapScript', () => {
 
   beforeAll(async () => {
     await bitcoinClient.init();
+    await bitcoinClient.generate(1);
+    await bitcoinClient.rescanBlockchain();
   });
 
   test('should send funds to reverse swaps', async () => {
