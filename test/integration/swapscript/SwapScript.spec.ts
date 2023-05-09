@@ -1,5 +1,5 @@
 import { randomBytes } from 'crypto';
-import { constructClaimTransaction, constructRefundTransaction , Networks, swapScript } from '../../../lib/Boltz';
+import { constructClaimTransaction, constructRefundTransaction , Networks, swapScript, targetFee } from '../../../lib/Boltz';
 import { bitcoinClient, createSwapDetails, ECPair, destinationOutput, claimSwap, refundSwap } from '../Utils';
 import { networks , crypto } from 'liquidjs-lib';
 import { getHexBuffer } from '../../../lib/Utils';
@@ -81,12 +81,13 @@ describe('SwapScript claim', () => {
   });
 
   test('should claim multiple swaps in one transaction', async () => {
-    const claimTransaction = constructClaimTransaction(
-      claimDetails.slice(3, 6),
-      destinationOutput,
-      1,
-      true,
-      networks.regtest.assetHash
+    const claimTransaction = targetFee(1, (fee) => constructClaimTransaction(
+        claimDetails.slice(3, 6),
+        destinationOutput,
+        fee,
+        true,
+        networks.regtest.assetHash,
+      ),
     );
 
     await bitcoinClient.sendRawTransaction(claimTransaction.toHex());
@@ -106,13 +107,14 @@ describe('SwapScript claim', () => {
   });
 
   test('should refund multiple swaps in one transaction', async () => {
-    const refundTransaction = constructRefundTransaction(
-      refundDetails.slice(3, 6),
-      destinationOutput,
-      bestBlockHeight,
-      1,
-      true,
-      networks.regtest.assetHash
+    const refundTransaction = targetFee(1, (fee) => constructRefundTransaction(
+        refundDetails.slice(3, 6),
+        destinationOutput,
+        bestBlockHeight,
+        fee,
+        true,
+        networks.regtest.assetHash
+      ),
     );
 
     await bitcoinClient.sendRawTransaction(refundTransaction.toHex());

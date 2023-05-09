@@ -24,3 +24,9 @@ export type RefundDetails = TransactionOutput & {
 export type ClaimDetails = RefundDetails & {
   preimage: Buffer;
 };
+
+export type Output = {
+  type: OutputType;
+
+  isSh?: boolean;
+};

@@ -7,11 +7,10 @@ import ops from '@boltz/bitcoin-ops';
 import * as varuint from 'varuint-bitcoin';
 import { crypto, script, Transaction, networks, confidential } from 'liquidjs-lib';
 import Errors from '../consts/Errors';
-import { Nonce, EmptyScript, PrefixUnconfidential } from '../consts/Buffer';
 import { OutputType } from '../consts/Enums';
 import { ClaimDetails } from '../consts/Types';
-import { estimateFee, Input } from '../FeeCalculator';
-import { encodeSignature, getOutputScriptType, scriptBuffersToScript } from './SwapUtils';
+import { Nonce, EmptyScript, PrefixUnconfidential } from '../consts/Buffer';
+import { encodeSignature, scriptBuffersToScript } from './SwapUtils';
 
 const { confidentialValueToSatoshi, satoshiToConfidentialValue } = confidential;
 
@@ -20,7 +19,7 @@ const { confidentialValueToSatoshi, satoshiToConfidentialValue } = confidential;
  *
  * @param utxos UTXOs that should be claimed or refunded
  * @param destinationScript the output script to which the funds should be sent
- * @param feePerByte how many satoshis per vbyte should be paid as fee
+ * @param fee how many satoshis should be paid as fee
  * @param isRbf whether the transaction should signal full Replace-by-Fee
  * @param timeoutBlockHeight locktime of the transaction; only needed if the transaction is a refund
  * @param assetHash asset hash of Liquid asset
@@ -28,7 +27,7 @@ const { confidentialValueToSatoshi, satoshiToConfidentialValue } = confidential;
 export const constructClaimTransaction = (
   utxos: ClaimDetails[],
   destinationScript: Buffer,
-  feePerByte: number,
+  fee: number,
   isRbf = true,
   assetHash: string = networks.liquid.assetHash,
   timeoutBlockHeight?: number,
@@ -50,21 +49,15 @@ export const constructClaimTransaction = (
 
   // The sum of the values of all UTXOs that should be claimed or refunded
   let utxoValueSum = 0;
-  const feeInputs: Input[] = [];
 
   utxos.forEach((utxo) => {
     utxoValueSum += confidentialValueToSatoshi(utxo.value);
-    feeInputs.push({ type: utxo.type, swapDetails: utxo });
 
     // Add the swap as input to the transaction
     //
     // RBF reference: https://github.com/bitcoin/bips/blob/master/bip-0125.mediawiki#summary
     tx.addInput(utxo.txHash, utxo.vout, isRbf ? 0xfffffffd : 0xffffffff);
   });
-
-  // Estimate the fee for the transaction
-  const fee = estimateFee(feePerByte, feeInputs, [getOutputScriptType(destinationScript)!]);
-
 
   const LBTC = Buffer.concat([
     PrefixUnconfidential,
@@ -85,7 +78,6 @@ export const constructClaimTransaction = (
     LBTC,
     Nonce
   );
-
 
   utxos.forEach((utxo, index) => {
     switch (utxo.type) {

@@ -9,9 +9,8 @@ import ops from '@boltz/bitcoin-ops';
 import { script } from 'liquidjs-lib';
 import * as varuint from 'varuint-bitcoin';
 import { OutputType } from '../consts/Enums';
-import { ScriptElement } from '../consts/Types';
-import { Output } from '../FeeCalculator';
 import { getHexBuffer, getHexString } from '../Utils';
+import { ScriptElement, Output } from '../consts/Types';
 
 const zeroHexBuffer = getHexBuffer('00');
 
