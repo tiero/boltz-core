@@ -4,7 +4,7 @@ import { crypto, address, Transaction, networks } from 'liquidjs-lib';
 import ChainClient from './utils/ChainClient';
 import { ClaimDetails, RefundDetails } from '../../lib/consts/Types';
 import { p2wpkhOutput, p2shOutput, p2wshOutput, p2shP2wshOutput } from '../../lib/swap/Scripts';
-import { Networks, OutputType, detectSwap, constructClaimTransaction, constructRefundTransaction } from '../../lib/Boltz';
+import { Networks, OutputType, detectSwap, constructClaimTransaction, constructRefundTransaction, targetFee } from '../../lib/Boltz';
 
 export const bitcoinClient = new ChainClient({
   host: '127.0.0.1',
@@ -23,25 +23,27 @@ export const destinationOutput = p2wpkhOutput(
 );
 
 export const claimSwap = async (claimDetails: ClaimDetails): Promise<void> => {
-  const claimTransaction = constructClaimTransaction(
-    [claimDetails],
-    destinationOutput,
-    1,
-    true,
-    networks.regtest.assetHash,
+  const claimTransaction = targetFee(1, (fee) => constructClaimTransaction(
+      [claimDetails],
+      destinationOutput,
+      fee,
+      true,
+      networks.regtest.assetHash,
+    ),
   );
 
   await bitcoinClient.sendRawTransaction(claimTransaction.toHex());
 };
 
 export const refundSwap = async (refundDetails: RefundDetails, blockHeight: number): Promise<void> => {
-  const refundTransaction = constructRefundTransaction(
-    [refundDetails],
-    destinationOutput,
-    blockHeight,
-    1,
-    true,
-    networks.regtest.assetHash
+  const refundTransaction = targetFee(1, (fee) => constructRefundTransaction(
+      [refundDetails],
+      destinationOutput,
+      blockHeight,
+      fee,
+      true,
+      networks.regtest.assetHash,
+    ),
   );
 
   await bitcoinClient.sendRawTransaction(refundTransaction.toHex());

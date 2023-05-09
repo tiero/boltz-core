@@ -1,8 +1,15 @@
 import { randomBytes } from 'crypto';
 import { networks , crypto } from 'liquidjs-lib';
-import { constructClaimTransaction , Networks, reverseSwapScript, OutputType , constructRefundTransaction } from '../../../lib/Boltz';
+import {
+  constructClaimTransaction,
+  Networks,
+  reverseSwapScript,
+  OutputType,
+  targetFee,
+  constructRefundTransaction,
+} from "../../../lib/Boltz";
 import { bitcoinClient, createSwapDetails, sendFundsToRedeemScript, refundSwap, ECPair, destinationOutput, claimSwap } from '../Utils';
-import { getHexBuffer } from '../../../lib/Utils';
+import { getHexBuffer } from '../../../lib/Utils'; 
 import { p2wshOutput } from '../../../lib/swap/Scripts';
 import { ClaimDetails, RefundDetails } from '../../../lib/consts/Types';
 
@@ -120,12 +127,13 @@ describe('ReverseSwapScript claim', () => {
   });
 
   test('should claim multiple reverse swaps in one transaction', async () => {
-    const claimTransaction = constructClaimTransaction(
-      claimDetails.slice(3, 6),
-      destinationOutput,
-      1,
-      false,
-      networks.regtest.assetHash
+    const claimTransaction = targetFee(1, (fee) => constructClaimTransaction(
+        claimDetails.slice(3, 6),
+        destinationOutput,
+        fee,
+        false,
+        networks.regtest.assetHash
+      ),
     );
 
     await bitcoinClient.sendRawTransaction(claimTransaction.toHex());
@@ -145,13 +153,14 @@ describe('ReverseSwapScript claim', () => {
   });
 
   test('should refund multiple reverse swaps in one transaction', async () => {
-    const refundTransaction = constructRefundTransaction(
-      refundDetails.slice(3, 6),
-      destinationOutput,
-      bestBlockHeight,
-      1,
-      true,
-      networks.regtest.assetHash
+    const refundTransaction = targetFee(1, (fee) => constructRefundTransaction(
+        refundDetails.slice(3, 6),
+        destinationOutput,
+        bestBlockHeight,
+        fee,
+        true,
+        networks.regtest.assetHash
+      ),
     );
 
     await bitcoinClient.sendRawTransaction(refundTransaction.toHex());
