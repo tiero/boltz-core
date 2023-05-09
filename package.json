@@ -34,7 +34,7 @@
     "bip66": "^1.1.5",
     "bitcoinjs-lib": "^6.1.0",
     "bn.js": "^5.2.1",
-    "ecpair": "^2.1.0",
+    "ecpair": "2.0.1",
     "liquidjs-lib": "^6.0.2-liquid.24",
     "tiny-secp256k1": "^2.2.1",
     "varuint-bitcoin": "^1.1.2"
