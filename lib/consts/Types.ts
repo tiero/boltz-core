@@ -1,6 +1,6 @@
 import { BIP32Interface } from 'bip32';
 import { ECPairInterface } from 'ecpair';
-import { TxOutput } from 'liquidjs-lib';
+import { Transaction, TxOutput } from 'liquidjs-lib';
 import { OutputType } from './Enums';
 
 export type Error = {
@@ -19,6 +19,8 @@ export type TransactionOutput = {
 export type RefundDetails = TransactionOutput & {
   keys: ECPairInterface | BIP32Interface;
   redeemScript: Buffer;
+  legacyTx?: Transaction;
+  blindinkPrivKey?: Buffer;
 };
 
 export type ClaimDetails = RefundDetails & {

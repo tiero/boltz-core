@@ -2,17 +2,42 @@
  * This file is based on the repository github.com/submarineswaps/swaps-service created by Alex Bosworth
  */
 
-import * as bip65 from 'bip65';
+import {
+  confidential,
+  Creator,
+  CreatorInput,
+  crypto,
+  Extractor,
+  Finalizer,
+  networks,
+  Pset,
+  script,
+  Signer,
+  Transaction,
+  Updater,
+  witnessStackToScriptWitness,
+} from 'liquidjs-lib';
 import ops from '@boltz/bitcoin-ops';
-import * as varuint from 'varuint-bitcoin';
-import { crypto, script, Transaction, networks, confidential } from 'liquidjs-lib';
+import { reverseBuffer, varuint } from 'liquidjs-lib/src/bufferutils';
 import Errors from '../consts/Errors';
+import { getHexString } from '../Utils';
 import { OutputType } from '../consts/Enums';
 import { ClaimDetails } from '../consts/Types';
-import { Nonce, EmptyScript, PrefixUnconfidential } from '../consts/Buffer';
-import { encodeSignature, scriptBuffersToScript } from './SwapUtils';
+import { confi, zkpLib } from '../Confidential';
+import { scriptBuffersToScript } from './SwapUtils';
 
-const { confidentialValueToSatoshi, satoshiToConfidentialValue } = confidential;
+const { confidentialValueToSatoshi } = confidential;
+
+const sighashType = Transaction.SIGHASH_ALL;
+
+const getOutputValue = (utxo: ClaimDetails): number => {
+  return utxo.blindinkPrivKey
+    ? Number(confi.unblindOutputWithKey(utxo, utxo.blindinkPrivKey).value)
+    : confidentialValueToSatoshi(utxo.value);
+};
+
+// TODO: to blinded address
+// TODO: spend blinded
 
 /**
  * Claim swaps
@@ -21,8 +46,9 @@ const { confidentialValueToSatoshi, satoshiToConfidentialValue } = confidential;
  * @param destinationScript the output script to which the funds should be sent
  * @param fee how many satoshis should be paid as fee
  * @param isRbf whether the transaction should signal full Replace-by-Fee
- * @param timeoutBlockHeight locktime of the transaction; only needed if the transaction is a refund
  * @param assetHash asset hash of Liquid asset
+ * @param blindingKey blinding public key for the output
+ * @param timeoutBlockHeight locktime of the transaction; only needed if the transaction is a refund
  */
 export const constructClaimTransaction = (
   utxos: ClaimDetails[],
@@ -30,6 +56,7 @@ export const constructClaimTransaction = (
   fee: number,
   isRbf = true,
   assetHash: string = networks.liquid.assetHash,
+  blindingKey?: Buffer,
   timeoutBlockHeight?: number,
 ): Transaction => {
   for (const input of utxos) {
@@ -38,91 +65,122 @@ export const constructClaimTransaction = (
     }
   }
 
-  const tx = new Transaction();
+  const pset = Creator.newPset();
 
-  // Refund transactions are just like claim ones and therefore this method
-  // is also used for refunds. The locktime of refund transactions has to be
-  // after the timelock of the UTXO is expired
-  if (timeoutBlockHeight) {
-    tx.locktime = bip65.encode({ blocks: timeoutBlockHeight });
+  const updater = new Updater(pset);
+
+  let utxoValueSum = 0;
+  for (const [i, utxo] of utxos.entries()) {
+    utxoValueSum += getOutputValue(utxo);
+
+    const txHash = Buffer.alloc(utxo.txHash.length);
+    utxo.txHash.copy(txHash);
+    const txid = getHexString(reverseBuffer(txHash));
+
+    pset.addInput(
+      new CreatorInput(
+        txid,
+        utxo.vout,
+        isRbf ? 0xfffffffd : 0xffffffff,
+        timeoutBlockHeight,
+      ).toPartialInput(),
+    );
+    updater.addInSighashType(i, sighashType);
+
+    if (utxo.type === OutputType.Legacy) {
+      updater.addInNonWitnessUtxo(i, utxo.legacyTx!);
+      updater.addInRedeemScript(i, utxo.redeemScript);
+    } else if (utxo.type === OutputType.Compatibility) {
+      updater.addInNonWitnessUtxo(i, utxo.legacyTx!);
+      updater.addInRedeemScript(
+        i,
+        scriptBuffersToScript([
+          scriptBuffersToScript([
+            varuint.encode(ops.OP_0).toString('hex'),
+            crypto.sha256(utxo.redeemScript),
+          ]),
+        ]),
+      );
+    }
+
+    if (utxo.type !== OutputType.Legacy) {
+      updater.addInWitnessUtxo(i, utxo);
+      updater.addInWitnessScript(i, utxo.redeemScript);
+    }
   }
 
-  // The sum of the values of all UTXOs that should be claimed or refunded
-  let utxoValueSum = 0;
-
-  utxos.forEach((utxo) => {
-    utxoValueSum += confidentialValueToSatoshi(utxo.value);
-
-    // Add the swap as input to the transaction
-    //
-    // RBF reference: https://github.com/bitcoin/bips/blob/master/bip-0125.mediawiki#summary
-    tx.addInput(utxo.txHash, utxo.vout, isRbf ? 0xfffffffd : 0xffffffff);
-  });
-
-  const LBTC = Buffer.concat([
-    PrefixUnconfidential,
-    Buffer.from(assetHash, 'hex').reverse(),
+  updater.addOutputs([
+    {
+      script: destinationScript,
+      blindingPublicKey: blindingKey,
+      asset: assetHash,
+      amount: utxoValueSum - fee,
+    },
+    {
+      amount: fee,
+      asset: assetHash,
+    },
   ]);
 
-  // Send the sum of the UTXOs minus the estimated fee to the destination address
-  tx.addOutput(
-    destinationScript,
-    satoshiToConfidentialValue(utxoValueSum - fee),
-    LBTC,
-    Nonce
-  );
-  // Add explicit fee output
-  tx.addOutput(
-    EmptyScript,
-    satoshiToConfidentialValue(fee),
-    LBTC,
-    Nonce
-  );
+  const signer = new Signer(pset);
 
-  utxos.forEach((utxo, index) => {
-    switch (utxo.type) {
-      // Construct and sign the input scripts for P2SH inputs
-      case OutputType.Legacy: {
-        const sigHash = tx.hashForSignature(index, utxo.redeemScript, Transaction.SIGHASH_ALL);
-        const signature = utxo.keys.sign(sigHash);
+  const signatures: Buffer[] = [];
 
-        const inputScript = [
-          encodeSignature(Transaction.SIGHASH_ALL, signature),
+  for (const [i, utxo] of utxos.entries()) {
+    const signature = script.signature.encode(
+      utxo.keys.sign(pset.getInputPreimage(i, sighashType)),
+      sighashType,
+    );
+    signatures.push(signature);
+
+    signer.addSignature(
+      i,
+      {
+        partialSig: {
+          pubkey: utxo.keys.publicKey,
+          signature,
+        },
+      },
+      Pset.ECDSASigValidator(zkpLib.ecc),
+    );
+  }
+
+  const finalizer = new Finalizer(pset);
+
+  for (const [i, utxo] of utxos.entries()) {
+    finalizer.finalizeInput(i, () => {
+      const finals: {
+        finalScriptSig?: Buffer;
+        finalScriptWitness?: Buffer;
+      } = {};
+
+      if (utxo.type === OutputType.Legacy) {
+        finals.finalScriptSig = scriptBuffersToScript([
+          signatures[i],
           utxo.preimage,
           ops.OP_PUSHDATA1,
           utxo.redeemScript,
-        ];
-
-        tx.setInputScript(index, scriptBuffersToScript(inputScript));
-        break;
+        ]);
+      } else if (utxo.type === OutputType.Compatibility) {
+        finals.finalScriptSig = scriptBuffersToScript([
+          scriptBuffersToScript([
+            varuint.encode(ops.OP_0).toString('hex'),
+            crypto.sha256(utxo.redeemScript),
+          ]),
+        ]);
       }
 
-      // Construct the nested redeem script for nested SegWit inputs
-      case OutputType.Compatibility: {
-        const nestedScript = [
-          varuint.encode(ops.OP_0).toString('hex'),
-          crypto.sha256(utxo.redeemScript),
-        ];
-
-        const nested = scriptBuffersToScript(nestedScript);
-
-        tx.setInputScript(index, scriptBuffersToScript([ nested ]));
-        break;
+      if (utxo.type !== OutputType.Legacy) {
+        finals.finalScriptWitness = witnessStackToScriptWitness([
+          signatures[i],
+          utxo.preimage,
+          utxo.redeemScript,
+        ]);
       }
-    }
 
-    // Construct and sign the witness for (nested) SegWit inputs
-    if (utxo.type !== OutputType.Legacy) {
-      const sigHash = tx.hashForWitnessV0(index, utxo.redeemScript, utxo.value, Transaction.SIGHASH_ALL);
-      const signature = script.signature.encode(utxo.keys.sign(sigHash), Transaction.SIGHASH_ALL);
+      return finals;
+    });
+  }
 
-      tx.setWitness(index, [
-        signature,
-        utxo.preimage,
-        utxo.redeemScript,
-      ]);
-    }
-  });
-
-  return tx;
+  return Extractor.extract(pset);
 };

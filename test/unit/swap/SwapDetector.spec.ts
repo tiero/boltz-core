@@ -19,6 +19,9 @@ describe('SwapDetector', () => {
     expect(output!.value).toEqual(confidential.satoshiToConfidentialValue(1));
     expect(output!.type).toEqual(index);
     expect(output!.script).toEqual(scripts[index]);
+    // TODO: test this
+    expect(output!.rangeProof).toEqual(undefined);
+    expect(output!.surjectionProof).toEqual(undefined);
   };
 
   beforeAll(() => {
@@ -41,7 +44,6 @@ describe('SwapDetector', () => {
       scripts.push(script);
       transaction.addOutput(script, confidential.satoshiToConfidentialValue(1), LBTC_REGTEST, Nonce);
       transaction.addOutput(EmptyScript, confidential.satoshiToConfidentialValue(500), LBTC_REGTEST, Nonce);
-
 
       transactions.push(transaction);
     }

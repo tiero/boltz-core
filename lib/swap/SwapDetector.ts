@@ -26,10 +26,7 @@ export const detectSwap = (redeemScript: Buffer, transaction: Transaction): Dete
 
     const swapOutput = {
       vout,
-      script: output.script,
-      value: output.value,
-      asset: output.asset,
-      nonce: output.nonce,
+      ...output,
     };
 
     switch (index) {

@@ -16,12 +16,10 @@ const dummyPreimage = getHexBuffer('0x00');
  * @param fee how many satoshis should be paid as fee
  * @param isRbf whether the transaction should signal full Replace-by-Fee
  * @param assetHash asset hash of Liquid asset
- * @param timeoutBlockHeight locktime of the transaction
  */
 export const constructRefundTransaction = (
   utxos: RefundDetails[],
   destinationScript: Buffer,
-  timeoutBlockHeight: number,
   fee: number,
   isRbf = true,
   assetHash: string = networks.liquid.assetHash,
@@ -41,6 +39,5 @@ export const constructRefundTransaction = (
     fee,
     isRbf,
     assetHash,
-    timeoutBlockHeight,
   );
 };

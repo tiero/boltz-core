@@ -1,16 +1,22 @@
 import BIP32Factory from 'bip32';
 import * as ecc from 'tiny-secp256k1';
+import zkp from '@vulpemventures/secp256k1-zkp';
+import { confidential, networks } from 'liquidjs-lib';
+import { LBTC_REGTEST } from './Utils';
 import { getHexBuffer } from '../../../lib/Utils';
+import { Nonce } from '../../../lib/consts/Buffer';
 import { OutputType } from '../../../lib/consts/Enums';
 import { ClaimDetails } from '../../../lib/consts/Types';
+import { prepareConfidential } from '../../../lib/Confidential';
 import { constructClaimTransaction } from '../../../lib/swap/Claim';
-import { LBTC_REGTEST } from './Utils';
-import { Nonce } from '../../../lib/consts/Buffer';
-import { confidential, networks } from 'liquidjs-lib';
 
 const bip32 = BIP32Factory(ecc);
 
 describe('Claim', () => {
+  beforeAll(async () => {
+    prepareConfidential(await zkp());
+  });
+
   const utxo = {
     txHash: getHexBuffer('285d227e2823c679c224b4d562a9b5b5b7b927badd483df9f4225c6fc761d754'),
     vout: 0,
@@ -51,7 +57,8 @@ describe('Claim', () => {
       getHexBuffer('00140000000000000000000000000000000000000000'),
       fee,
       false,
-      networks.regtest.assetHash
+      networks.regtest.assetHash,
+      undefined,
     );
   };
 

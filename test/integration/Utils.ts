@@ -1,6 +1,6 @@
-import { ECPairFactory, ECPairInterface, ECPairAPI, TinySecp256k1Interface } from 'ecpair';
 import * as ecc from 'tiny-secp256k1';
 import { crypto, address, Transaction, networks } from 'liquidjs-lib';
+import { ECPairFactory, ECPairInterface, ECPairAPI, TinySecp256k1Interface } from 'ecpair';
 import ChainClient from './utils/ChainClient';
 import { ClaimDetails, RefundDetails } from '../../lib/consts/Types';
 import { p2wpkhOutput, p2shOutput, p2wshOutput, p2shP2wshOutput } from '../../lib/swap/Scripts';
@@ -35,11 +35,10 @@ export const claimSwap = async (claimDetails: ClaimDetails): Promise<void> => {
   await bitcoinClient.sendRawTransaction(claimTransaction.toHex());
 };
 
-export const refundSwap = async (refundDetails: RefundDetails, blockHeight: number): Promise<void> => {
+export const refundSwap = async (refundDetails: RefundDetails): Promise<void> => {
   const refundTransaction = targetFee(1, (fee) => constructRefundTransaction(
       [refundDetails],
       destinationOutput,
-      blockHeight,
       fee,
       true,
       networks.regtest.assetHash,
@@ -69,6 +68,7 @@ export const createSwapDetails = async (
       claimDetails.push({
         preimage,
         keys: claimKeys,
+        legacyTx: out.legacyTx,
         redeemScript: out.redeemScript,
         ...out.swapOutput,
       });
@@ -117,6 +117,7 @@ export const sendFundsToRedeemScript = async (
 ): Promise<{
   redeemScript: Buffer,
   timeoutBlockHeight: number,
+  legacyTx: Transaction;
   swapOutput: {
     vout: number,
     value: Buffer,
@@ -136,6 +137,7 @@ export const sendFundsToRedeemScript = async (
   return {
     redeemScript,
     timeoutBlockHeight,
+    legacyTx: transaction,
     swapOutput: {
       vout,
       value,

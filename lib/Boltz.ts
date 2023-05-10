@@ -6,6 +6,7 @@ import { OutputType } from './consts/Enums';
 import * as SwapUtils from './swap/SwapUtils';
 import { targetFee } from './swap/FeeEstimator';
 import { detectSwap } from './swap/SwapDetector';
+import { prepareConfidential } from './Confidential';
 import reverseSwapScript from './swap/ReverseSwapScript';
 import { constructClaimTransaction } from './swap/Claim';
 import { detectPreimage } from './swap/PreimageDetector';
@@ -34,4 +35,6 @@ export {
   constructRefundTransaction,
 
   SwapUtils,
+
+  prepareConfidential,
 };
