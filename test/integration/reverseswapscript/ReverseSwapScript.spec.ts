@@ -18,6 +18,7 @@ import {
   ECPair,
   destinationOutput,
   claimSwap,
+  slip77,
 } from '../Utils';
 import { getHexBuffer } from '../../../lib/Utils';
 import { p2wshOutput } from '../../../lib/swap/Scripts';
@@ -28,7 +29,7 @@ export let invalidPreimageLengthSwap: ClaimDetails;
 export let claimDetails: ClaimDetails[] = [];
 export let refundDetails: RefundDetails[] = [];
 
-describe('ReverseSwapScript claim', () => {
+describe('ReverseSwapScript', () => {
   const claimKeys = ECPair.makeRandom({ network: Networks.liquidRegtest });
   const refundKeys = ECPair.makeRandom({ network: Networks.liquidRegtest });
 
@@ -39,6 +40,8 @@ describe('ReverseSwapScript claim', () => {
     '9b2b702b8fd1cbd1375b3a63a840b8a02c318d93309e8df3203e120045dd0ae0',
   );
   const preimageHash = crypto.sha256(preimage);
+
+  let bestBlockHeight: number;
 
   beforeAll(async () => {
     await bitcoinClient.init();
@@ -67,6 +70,7 @@ describe('ReverseSwapScript claim', () => {
       OutputType.Bech32,
       redeemScript,
       timeoutBlockHeight,
+      false,
     );
 
     invalidPreimageLengthSwap = {
@@ -78,13 +82,12 @@ describe('ReverseSwapScript claim', () => {
 
     claimDetails = details.claimDetails;
     refundDetails = details.refundDetails;
-
-    expect(claimDetails.length).toEqual(6);
-    expect(refundDetails.length).toEqual(6);
   });
 
   beforeEach(async () => {
     await bitcoinClient.generate(1);
+    const { blocks } = await bitcoinClient.getBlockchainInfo();
+    bestBlockHeight = blocks;
   });
 
   test('should not claim reverse swaps if the preimage has an invalid length', async () => {
@@ -123,22 +126,25 @@ describe('ReverseSwapScript claim', () => {
     );
   });
 
-  test('should claim a P2SH reverse swap', async () => {
+  test('should claim a P2WSH reverse swap', async () => {
     await claimSwap(claimDetails[0]);
   });
 
-  test('should claim a P2WSH reverse swap', async () => {
-    await claimSwap(claimDetails[1]);
+  test('should claim a fully blinded P2WSH reverse swap', async () => {
+    await claimSwap(
+      claimDetails[3],
+      slip77.derive(destinationOutput).publicKey,
+    );
   });
 
-  test('should claim a P2SH nested P2WSH reverse swap', async () => {
-    await claimSwap(claimDetails[2]);
+  test('should claim a blinded P2WSH reverse swap to an unblinded address', async () => {
+    await claimSwap(claimDetails[4]);
   });
 
   test('should claim multiple reverse swaps in one transaction', async () => {
     const claimTransaction = targetFee(1, (fee) =>
       constructClaimTransaction(
-        claimDetails.slice(3, 6),
+        claimDetails.slice(1, 3),
         destinationOutput,
         fee,
         false,
@@ -149,23 +155,31 @@ describe('ReverseSwapScript claim', () => {
     await bitcoinClient.sendRawTransaction(claimTransaction.toHex());
   });
 
-  test('should refund a P2SH reverse swap', async () => {
-    await refundSwap(refundDetails[0]);
+  test('should claim multiple fully blinded reverse swaps in one transaction', async () => {
+    const claimTransaction = targetFee(1, (fee) =>
+      constructClaimTransaction(
+        claimDetails.slice(5, 8),
+        destinationOutput,
+        fee,
+        false,
+        networks.regtest.assetHash,
+        slip77.derive(destinationOutput).publicKey,
+      ),
+    );
+
+    await bitcoinClient.sendRawTransaction(claimTransaction.toHex());
   });
 
   test('should refund a P2WSH reverse swap', async () => {
-    await refundSwap(refundDetails[1]);
-  });
-
-  test('should refund a P2SH nested P2WSH reverse swap', async () => {
-    await refundSwap(refundDetails[2]);
+    await refundSwap(refundDetails[0], bestBlockHeight);
   });
 
   test('should refund multiple reverse swaps in one transaction', async () => {
     const refundTransaction = targetFee(1, (fee) =>
       constructRefundTransaction(
-        refundDetails.slice(3, 6),
+        refundDetails.slice(1, 3),
         destinationOutput,
+        bestBlockHeight,
         fee,
         true,
         networks.regtest.assetHash,

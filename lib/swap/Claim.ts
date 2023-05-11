@@ -2,10 +2,14 @@
  * This file is based on the repository github.com/submarineswaps/swaps-service created by Alex Bosworth
  */
 
+import ops from '@boltz/bitcoin-ops';
+import { reverseBuffer, varuint } from 'liquidjs-lib/src/bufferutils';
 import {
+  Blinder,
   confidential,
   Creator,
   CreatorInput,
+  CreatorOutput,
   crypto,
   Extractor,
   Finalizer,
@@ -16,28 +20,19 @@ import {
   Transaction,
   Updater,
   witnessStackToScriptWitness,
+  ZKPGenerator,
+  ZKPValidator,
 } from 'liquidjs-lib';
-import ops from '@boltz/bitcoin-ops';
-import { reverseBuffer, varuint } from 'liquidjs-lib/src/bufferutils';
 import Errors from '../consts/Errors';
 import { getHexString } from '../Utils';
 import { OutputType } from '../consts/Enums';
 import { ClaimDetails } from '../consts/Types';
-import { confi, zkpLib } from '../Confidential';
 import { scriptBuffersToScript } from './SwapUtils';
+import { confi, ecPair, zkpLib } from '../Confidential';
 
 const { confidentialValueToSatoshi } = confidential;
 
 const sighashType = Transaction.SIGHASH_ALL;
-
-const getOutputValue = (utxo: ClaimDetails): number => {
-  return utxo.blindinkPrivKey
-    ? Number(confi.unblindOutputWithKey(utxo, utxo.blindinkPrivKey).value)
-    : confidentialValueToSatoshi(utxo.value);
-};
-
-// TODO: to blinded address
-// TODO: spend blinded
 
 /**
  * Claim swaps
@@ -60,9 +55,19 @@ export const constructClaimTransaction = (
   timeoutBlockHeight?: number,
 ): Transaction => {
   for (const input of utxos) {
-    if (input.type === OutputType.Taproot) {
-      throw Errors.TAPROOT_NOT_SUPPORTED;
+    if (input.type !== OutputType.Bech32) {
+      throw Errors.ONLY_NATIVE_SEGWIT_INPUTS;
     }
+  }
+
+  if (
+    !utxos.every(
+      (utxo) =>
+        (utxo.blindinkPrivKey === undefined) ===
+        (utxos[0].blindinkPrivKey === undefined),
+    )
+  ) {
+    throw Errors.INCONSISTENT_BLINDING;
   }
 
   const pset = Creator.newPset();
@@ -82,7 +87,7 @@ export const constructClaimTransaction = (
         txid,
         utxo.vout,
         isRbf ? 0xfffffffd : 0xffffffff,
-        timeoutBlockHeight,
+        i == 0 ? timeoutBlockHeight : undefined,
       ).toPartialInput(),
     );
     updater.addInSighashType(i, sighashType);
@@ -115,12 +120,40 @@ export const constructClaimTransaction = (
       blindingPublicKey: blindingKey,
       asset: assetHash,
       amount: utxoValueSum - fee,
-    },
-    {
-      amount: fee,
-      asset: assetHash,
+      blinderIndex: blindingKey !== undefined ? 0 : undefined,
     },
   ]);
+
+  const addFeeOutput = () => {
+    updater.addOutputs([
+      {
+        amount: fee,
+        asset: assetHash,
+      },
+    ]);
+  };
+
+  if (utxos[0].blindinkPrivKey !== undefined) {
+    // We have to have at least one blinded output if we are spending blinded coins,
+    // so we add a small OP_RETURN
+    if (blindingKey === undefined) {
+      pset.addOutput(
+        new CreatorOutput(
+          assetHash,
+          0,
+          Buffer.of(ops.OP_RETURN),
+          ecPair.makeRandom().publicKey,
+          0,
+        ).toPartialOutput(),
+      );
+    }
+
+    addFeeOutput();
+
+    blindPset(pset, utxos);
+  } else {
+    addFeeOutput();
+  }
 
   const signer = new Signer(pset);
 
@@ -183,4 +216,33 @@ export const constructClaimTransaction = (
   }
 
   return Extractor.extract(pset);
+};
+
+const getOutputValue = (utxo: ClaimDetails): number => {
+  return utxo.blindinkPrivKey
+    ? Number(confi.unblindOutputWithKey(utxo, utxo.blindinkPrivKey).value)
+    : confidentialValueToSatoshi(utxo.value);
+};
+
+const blindPset = (pset: Pset, utxos: ClaimDetails[]) => {
+  const zkpGenerator = new ZKPGenerator(
+    zkpLib,
+    ZKPGenerator.WithBlindingKeysOfInputs(
+      utxos.map((utxo) => utxo.blindinkPrivKey!),
+    ),
+  );
+  const zkpValidator = new ZKPValidator(zkpLib);
+  const outputBlindingArgs = zkpGenerator.blindOutputs(
+    pset,
+    Pset.ECCKeysGenerator(zkpLib.ecc),
+  );
+
+  const blinder = new Blinder(
+    pset,
+    zkpGenerator.unblindInputs(pset),
+    zkpValidator,
+    zkpGenerator,
+  );
+
+  blinder.blindLast({ outputBlindingArgs });
 };
